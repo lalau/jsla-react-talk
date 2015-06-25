@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang='en'>
+
+  <head>
+    <meta charset='utf-8'>
+
+    <title>Scalable and Maintainable React</title>
+
+    <meta name='description' content='A framework for easily creating beautiful presentations using HTML'>
+    <meta name='author' content='Hakim El Hattab'>
+
+    <meta name='apple-mobile-web-app-capable' content='yes' />
+    <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui'>
+
+    <link rel='stylesheet' href='reveal.js/css/reveal.css'>
+    <link rel='stylesheet' href='reveal.js/css/theme/black.css' id='theme'>
+
+    <!-- Code syntax highlighting -->
+    <link rel='stylesheet' href='reveal.js/lib/css/zenburn.css'>
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src='reveal.js/lib/js/html5shiv.js'></script>
+    <![endif]-->
+
+    <style>
+      .reveal pre code {
+        max-height: 500px;
+      }
+
+      .reveal .comment {
+        font-size: 30px;
+        text-align: left;
+      }
+
+      .reveal .comment.oneline {
+        text-align: center;
+      }
+
+      .reveal .slides section .highlight-current .visible.current-fragment {
+        opacity: 1;
+      }
+
+      .reveal .slides section .highlight-current .visible {
+        opacity: 0.5;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class='reveal'>
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class='slides'>
+        <section>
+          <h1>Scalable and Maintainable React</h1>
+          <p class='comment oneline'>by Lawrence Lau</p>
+        </section>
+
+        <section>
+          <h2>What This Is Not About</h2>
+          <ul>
+            <li>What is React</li>
+            <li>Why use React</li>
+            <li>
+              Flux framework libraries
+              <ul>
+                <li>Reflux</li>
+                <li>Fluxxor</li>
+                <li>Fluxible</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Overview</h2>
+          <ul>
+            <li>React component</li>
+            <li>State management</li>
+            <li>Store</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>React component</h2>
+          <ul>
+            <li>Mixin namespacing</li>
+            <li>Singleton in mixin</li>
+            <li>The `key`</li>
+          </ul>
+        </section>
+
+        <section>
+          <section>
+            <h2>Mixin namespacing</h2>
+          </section>
+          <section>
+            <p>I have a component that can play video.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  playVideo: function() {
+    window.vp.playVideo();
+  },
+  render: function() {
+    return <button onclick={this.playVideo}>Play Video</button>;
+  }
+});
+            </code></pre>
+            <div class='fragment'>
+              <p>Then I have another component that can play too.</p>
+              <pre><code>
+  var TheOtherVideoChannel = React.createClass({
+    playVideo: function() {
+      window.vp.playVideo();
+    },
+    render: function() {
+      return <button onclick={this.playVideo}>Play Video</button>;
+    }
+  });
+              </code></pre>
+            </div>
+          </section>
+          <section>
+            <p>Let's move them into a mixin and share.</p>
+            <pre><code>
+var PlayerMixin = {
+  playVideo: function() {
+    window.vp.playVideo();
+  }
+};
+            </code></pre>
+            <pre><code>
+var VideoChannel = React.createClass({
+  mixins: [ PlayerMixin ],
+  render: function() {
+    return <button onclick={this.playVideo}>Play Video</button>;
+  }
+});
+            </code></pre>
+          </section>
+          <section>
+            <p>I want to catch the attention before I play the video.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  mixins: [ PlayerMixin ],
+
+  playVideo: function() {
+    alert('Hey! Video is going to start.');
+    this.playVideo();
+  },
+
+  render: function() {
+    return <button onclick={this.playVideo}>Play Video</button>;
+  }
+});
+            </code></pre>
+            <p class='fragment comment'>Uncaught Error: Invariant Violation: ReactClassInterface: You are attempting to define `playVideo` on your component more than once. This conflict may be due to a mixin.</p>
+          </section>
+          <section>
+            <p>When the mixin is providing generic utility methods, it could group them under a namespace.</p>
+            <pre><code>
+var PlayerMixin = {
+  playerApi: {
+    playVideo: function() {
+      window.vp.playVideo();
+    }
+  }
+};
+            </code></pre>
+            <pre><code>
+var VideoChannel = React.createClass({
+  mixins: [ PlayerMixin ],
+
+  playVideo: function() {
+    alert('Hey! Video is going to start.');
+    this.playerApi.playVideo();
+  },
+
+  render: function() {
+    return <button onclick={this.playVideo}>Play Video</button>;
+  }
+});
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Singleton in Mixin</h2>
+          </section>
+          <section>
+            <p>Let's autoplay the video.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  mixins: [ PlayerMixin ],
+  
+  componentDidMount: function() {
+    this.playVideo();
+  },
+  
+  playVideo: function() {
+    alert('Hey! Video is going to start.');
+    this.playerApi.playVideo();
+  }
+});
+            </code></pre>
+          </section>
+          <section>
+            <p>I should init the player myself.</p>
+            <pre><code>
+var PlayerMixin = {
+  playerApi: {
+    initPlayer: function() {
+      this.vp = this.vp || new VideoPlayer();
+    },
+    ...
+  }
+};
+            </code></pre>
+            <pre><code>
+var VideoChannel = React.createClass({
+  ...
+  componentDidMount: function() {
+    this.playerApi.initPlayer();
+    this.playVideo();
+  },
+  ...
+});
+            </code></pre>
+            <p class='fragment comment oneline'>But wait, why it suddenly starts to play random videos?</p>
+          </section>
+          <section>
+            <p>`this` refers to the `playerApi` object, which is the same object shared in all components using the mixin.</p>
+            <pre><code>
+var PlayerMixin = {
+  playerApi: {
+    initPlayer: function() {
+      this.vp = this.vp || new VideoPlayer();
+    },
+
+    playVideo: function() {
+      this.vp.playVideo();
+    }
+  }
+};
+            </code></pre>
+          </section>
+          <section>
+            <p>The `playerApi` object needs to be created for each component that uses the mixin.</p>
+            <pre><code>
+var PlayerMixin = {
+  initPlayerApi: function() {
+    this.playerApi = {
+      initPlayer: function() {
+        this.vp = this.vp || new VideoPlayer();
+      },
+
+      playVideo: function() {
+        this.vp.playVideo();
+      }
+    };
+  }
+};
+            </code></pre>
+          </section>
+          <section>
+            <p>The component will init the mixin on mount.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  ...
+  componentDidMount: function() {
+    this.initPlayerApi();
+    this.playerApi.initPlayer();
+    this.playVideo();
+  },
+  ...
+});
+            </code></pre>
+            <p class='fragment comment oneline'>Hey, don't forget the unique features of mixin: Lifecycle chaining</p>
+          </section>
+          <section>
+            <p>Let the mixin init itself.</p>
+            <pre><code>
+var PlayerMixin = {
+  ...
+  componentDidMount: function() {
+    this.initPlayerApi();
+  },
+  ...
+};
+            </code></pre>
+            <pre class='fragment'><code>
+var VideoChannel = React.createClass({
+  ...
+  componentDidMount: function() {
+    this.playerApi.initPlayer();
+    this.playVideo();
+  },
+  ...
+});
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>The `key`</h2>
+          </section>
+          <section>
+            <p>The `flattenChildren` warning</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  getInitialState: function() {
+    return {videos: [{id: 'a'}, {id: 'b'}, {id: 'c'}]};
+  },
+
+  render: function() {
+    return (
+      <ol>
+        {this.state.videos.map(function(video) {
+          return <li>Video {video.id}</li>;
+        })}
+      </ol>
+    );
+  }
+});
+            </code></pre>
+            <p class='fragment comment'>Warning: Each child in an array or iterator should have a unique "key" prop.</p>
+          </section>
+          <section>
+            <p>Let's just have the simplest key</p>
+            <pre><code>
+var Video = React.createClass({
+  render: function() {
+    return (<div>Video {this.props.video.id}</div>);
+  }
+});
+            </code></pre>
+            <pre><code>
+var VideoChannel = React.createClass({
+  ...
+  render: function() {
+    return (
+      <ol>
+        {this.state.videos.map(function(video, count) {
+          return <li key={count}>&lt;Video video={video}/></li>;
+        })}
+      </ol>
+    );
+  }
+  ...
+});
+            </code></pre>
+          </section>
+          <section>
+            <p>Let's do something when we put the `Video` on the page, and clean it up when we remove it.</p>
+            <pre><code>
+var Video = React.createClass({
+  componentDidMount: function() {
+    console.log('Video ' + this.props.video.id + ' mounted');
+  },
+
+  componentWillUnmount: function() {
+    console.log('Video ' + this.props.video.id + ' will unmount');
+  },
+
+  render: function() {
+    return (<div>Video {this.props.video.id}</div>);
+  }
+});
+            </code></pre>
+            <pre class='fragment'>
+Video a mounted
+Video b mounted
+Video c mounted
+            </pre>
+          </section>
+          <section>
+            <p>I want to render some channels too.</p>
+            <pre><code>
+var Channel = React.createClass({
+  componentDidMount: function() {
+    console.log('Channel ' + this.props.channel.id + ' mounted');
+  },
+
+  componentWillUnmount: function() {
+    console.log('Channel ' + this.props.channel.id + ' will unmount');
+  },
+
+  render: function() {
+    return (<div>Channel {this.props.channel.id}</div>);
+  }
+});
+            </code></pre>
+          </section>
+          <section>
+            <p>Let's display a mixed list of channels and videos.</p>
+            <pre><code>
+getInitialState: function() {
+  return {items: [
+    {type: 'channel', id: 'x'}, {type: 'video', id: 'a'},
+    {type: 'channel', id: 'y'}, {type: 'video', id: 'b'}
+  ]};
+},
+
+render: function() {
+  return (<ol>
+    {this.state.items.map(function(item, count) {
+      if (item.type === 'channel') {
+        return <li key={count}>&lt;Channel channel={item}/></li>;
+      } else if (item.type === 'video') {
+        return <li key={count}>&lt;Video video={item}/></li>;
+      }
+    })}
+  </ol>);
+}
+            </code></pre>
+            <pre class='fragment'>
+Channel x mounted
+Video   a mounted
+Channel y mounted
+Video   b mounted
+            </pre>
+          </section>
+          <section>
+            <p>After two seconds, I want to show a breaking video.</p>
+            <pre><code>
+  componentDidMount: function() {
+      var self = this;
+      setTimeout(function() {
+          self.setState({
+              items: React.addons.update(self.state.items, {
+                  $unshift: [{type: 'video', id: 'c'}]
+              })
+          })
+      }, 2000);
+  },
+            </code></pre>
+            <table style='width: 90%' class='fragment'>
+              <tr>
+                <td>
+                  <pre>
+Channel x mounted
+Video   a mounted
+Channel y mounted
+Video   b mounted
+                  </pre>
+                </td>
+                <td>
+                  <pre class='fragment'>
+Channel x will unmount
+Video   a will unmount
+Channel y will unmount
+Video   b will unmount
+Video   c mounted
+Channel x mounted
+Video   a mounted
+Channel y mounted
+Video   b mounted
+                  </pre>
+                </td>
+              </tr>
+            </table>
+          </section>
+          <section>
+            <p>Let's look at what is changing.</p>
+            <table style='width: 90%'>
+              <tr>
+                <td class='fragment'>
+                  <p style='text-align: center;'>First render</p>
+                  <pre>
+&lt;ol>
+  &lt;Channel>   Channel.0
+  &lt;Video>     Video.1
+  &lt;Channel>   Channel.2
+  &lt;Video>     Video.3
+                  </pre>
+                </td>
+                <td class='fragment'>
+                  <p style='text-align: center;'>Second render</p>
+                  <pre>
+&lt;ol>
+  &lt;Video> Video.0
+  &lt;Channel> Channel.1
+  &lt;Video> Video.2
+  &lt;Channel> Channel.3
+  &lt;Video> Video.4
+                  </pre>
+                </td>
+              </tr>
+            </table>
+            <p class='fragment comment'>All child components need to be re-created because the key does not match.</p>
+          </section>
+          <section>
+            <p>What if I use id as the key?</p>
+            <pre><code>
+render: function() {
+  return (<ol>
+    {this.state.items.map(function(item) {
+      if (item.type === 'channel') {
+        return <li key={item.id}>&lt;Channel channel={item}/></li>;
+      } else if (item.type === 'video') {
+        return <li key={item.id}>&lt;Video video={item}/></li>;
+      }
+    })}
+  </ol>);
+}
+            </code></pre>
+            <table style='width: 90%' class='fragment'>
+              <tr>
+                <td>
+                  <pre>
+Channel x mounted
+Video   a mounted
+Channel y mounted
+Video   b mounted
+                  </pre>
+                </td>
+                <td>
+                  <pre class='fragment'>
+Video c mounted
+                  </pre>
+                </td>
+              </tr>
+            </table>
+          </section>
+          <section>
+            <p>Now let's compare.</p>
+            <table style='width: 90%'>
+              <tr>
+                <td class='fragment'>
+                  <p style='text-align: center;'>First render</p>
+                  <pre>
+&lt;ol>
+  &lt;Channel>   Channel.x
+  &lt;Video>     Video.a
+  &lt;Channel>   Channel.y
+  &lt;Video>     Video.b
+                  </pre>
+                </td>
+                <td class='fragment'>
+                  <p style='text-align: center;'>Second render</p>
+                  <pre>
+&lt;ol>
+  &lt;Video> Video.c
+  &lt;Channel> Channel.x
+  &lt;Video> Video.a
+  &lt;Channel> Channel.y
+  &lt;Video> Video.b
+                  </pre>
+                </td>
+              </tr>
+            </table>
+            <p class='fragment comment'>I only need to insert the new component at the front. Rest untouched.</p>
+            <p class='fragment comment'>Item id seems to be the best key to use in all cases. <span class='fragment'>Or not?</span></p>
+          </section>
+          <section>
+            <p>Let's look at the pagination use case.</p>
+            <pre><code>
+render: function() {
+  return (<ol>
+    {this.state.items.map(function(item) {
+      return <li key={item.id}>&lt;Item item={item}/></li>;
+    })}
+  </ol>);
+}
+            </code></pre>
+        </section>
+        <section>
+            <p>Is item id doing any good here?</p>
+            <table style='width: 90%'>
+              <tr>
+                <td class='fragment'>
+                  <p style='text-align: center;'>First render</p>
+                  <pre>
+&lt;ol>
+  &lt;Item>   Item.a
+  &lt;Item>   Item.b
+  &lt;Item>   Item.c
+                  </pre>
+                </td>
+                <td class='fragment'>
+                  <p style='text-align: center;'>Second render</p>
+                  <pre>
+&lt;ol>
+  &lt;Item>   Item.d
+  &lt;Item>   Item.e
+  &lt;Item>   Item.f
+                  </pre>
+                </td>
+              </tr>
+            </table>
+            <p class='fragment comment oneline'>Again all child components need to be re-created.</p>
+          </section>
+          <section>
+            <p>Looks like the simple array index is better in this case.</p>
+            <table style='width: 90%'>
+              <tr>
+                <td class='fragment'>
+                  <p style='text-align: center;'>First render</p>
+                  <pre>
+&lt;ol>
+  &lt;Item>   Item.1  {id:'a'}
+  &lt;Item>   Item.2  {id:'b'}
+  &lt;Item>   Item.3  {id:'c'}
+                  </pre>
+                </td>
+                <td class='fragment'>
+                  <p style='text-align: center;'>Second render</p>
+                  <pre>
+&lt;ol>
+  &lt;Item>   Item.1  {id:'d'}
+  &lt;Item>   Item.2  {id:'e'}
+  &lt;Item>   Item.3  {id:'f'}
+                  </pre>
+                </td>
+              </tr>
+            </table>
+            <ul style='list-style: none'>
+              <li class='fragment' style='margin-bottom: 20px'>
+                <p class='comment'>With key unchanged, components will keep mounted while updating props, which only triggers componentWillReceiveProps.</p>
+              </li>
+              <li class='fragment'>
+                <p class='comment'>Pick the right key depending on the use case.</p>
+              </li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <h2>State management</h2>
+          <ul>
+            <li>State or prop</li>
+            <li>The race to change state</li>
+          </ul>
+        </section>
+
+        <section>
+          <section>
+            <h2>State or prop</h2>
+          </section>
+          <section>
+            <p>Prop is for the external.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  render: function() {
+    var style = this.props.highlight && {color: 'red'} || null;
+    return (
+      <div style={style} onClick={this.highlightAction}>
+          <h3>{this.props.title}</h3>
+      </div>
+    );
+  }
+});
+            </code></pre>
+            <p class='fragment comment oneline'>Do you want to allow the component to be inited with highlighted style?</p>
+          </section>
+          <section>
+            <p>State is for the internal.</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  getInitialState: function() {
+    return {
+      highlight: false
+    };
+  },
+
+  highlight: function() {
+    this.setState({
+      highlight: true
+    });
+  },
+
+  render: function() {
+    var style = this.state.highlight && {color: 'red'} || null;
+    return (
+      <div style={style} onClick={this.highlight}>
+        <h3>{this.props.title}</h3>
+      </div>
+    );
+  }
+});
+            </code></pre>
+            <p class='fragment comment oneline'>Or do you only want the component to be highlighted at user actions?</p>
+          </section>
+          <section>
+            <p>State or prop</p>
+            <p class='comment oneline'>Components can be rendered to many different configuration, <br>but it can only be created based on the props.</p>
+            <img class='fragment' style='border-width: 1px; padding: 20px 20px 30px 30px; background: transparent' src='img/ReactComponentPropState.svg'/>
+          </section>
+          <section>
+            <p>State or prop</p>
+            <p class='fragment comment'>Only settings that are allowed to be controlled externally should be in props.</p></li>
+            <p class='fragment comment'>E.g. A progress bar component can only start with 0% of completion. Then the progress percentage should only be in state.</p>
+          </section>
+          <section>
+            <p>Set to `this`?</p>
+            <pre><code>
+highlight: function() {
+  if (!this.interacted) {
+    this.setState({
+      highlight: true
+    });
+    this.interacted = true;
+  }
+}
+            </code></pre>
+            <p class='fragment comment'><i>"State should contain data that a component's event handlers may change to trigger a UI update."</i></p>
+          </section>
+          <section>
+            <p>What can be set to `this`?</p>
+            <p class='fragment comment oneline'>Things that don't change over the component's lifetime.</p>
+            <pre class='fragment'><code>
+componentDidMount: function() {
+  this.componentMountedSince = Date.now();
+},
+
+render: function() {
+  return (
+    <p>Showing since {this.componentMountedSince}</p>
+  );
+}
+            </code></pre>
+          </section>
+          <section>
+            <p>What can be set to `this`?</p>
+            <p class='fragment comment oneline'>Things that don't matter with UI.</p>
+            <pre class='fragment'><code>
+setInterval: function() {
+  this.intervals = this.intervals || [];
+  this.intervals.push(setInterval.apply(null, arguments));
+},
+
+componentWillUnmount: function() {
+  this.intervals.map(clearInterval);
+}
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>The race to change state</h2>
+          </section>
+          <section>
+            <p>Let's see what can go wrong with a simple setState</p>
+            <pre><code>
+var VideoChannel = React.createClass({
+  getInitialState: function() {
+    return {
+      highlight: false
+    };
+  },
+
+  highlight: function() {
+    this.setState({
+      highlight: true
+    });
+  },
+
+  render: function() {
+    var style = this.state.highlight && {color: 'red'} || null;
+    return (
+      <div style={style} onClick={this.highlight}>
+        <h3>{this.props.title}</h3>
+      </div>
+    );
+  }
+});
+            </code></pre>
+          </section>
+          <section>
+            <p>Why not show more videos on click and highlight it?</p>
+            <pre><code>
+getVideos: function() {
+  var self = this;
+
+  // get the videos and go through store to refresh the props
+  getVideosAction();
+  self.setState({highlight: true});
+  setTimeout(function(){
+    self.setState({highlight: false});
+  }, 3000);
+},
+
+render: function() {
+  var style = this.state.highlight && {color: 'red'} || null;
+  return (
+    <div style={style} onClick={this.getVideos}>
+      <h3>{this.props.title}</h3>
+      &lt;VideoList videos={this.props.videos}/>
+    </div>
+  );
+}
+            </code></pre>
+          </section>
+          <section>
+            <p>Be careful when action and setState appear together.</p>
+            <pre><code>
+...
+  getVideosAction();
+  self.setState({highlight: true});
+  setTimeout(function(){
+    self.setState({highlight: false});
+  }, 3000);
+...
+            </code></pre>
+            <p class='fragment comment'>Action could be async. If the state depends on the changes from the action, the component could be rendered in an unexpected state.</p>
+          </section>
+          <section>
+            <p>I only want to highlight if the component gets more videos</p>
+            <pre><code>
+componentWillReceiveProps: function(nextProps) {
+  var self = this;
+  if (nextProps.videos.length > self.props.videos.length) {
+    self.setState({highlight: true});
+    setTimeout(function(){
+      self.setState({highlight: false});
+    }, 3000);
+  }
+},
+
+getVideos: function() {
+  // get the videos and go through store to refresh the props
+  getVideosAction();
+},
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <h2>Store</h2>
+          <ul>
+            <li>Defining stores</li>
+          </ul>
+        </section>
+
+        <section>
+          <section>
+            <h2>Defining stores</h2>
+          </section>
+          <section>
+            <p><i>"Stores contain the application state and logic. ... stores manage the application state for a particular domain within the application."</i></p>
+            <p class='fragment'>Stores keep everything, but in multiple stores.</p>
+          </section>
+          <section>
+            <img src='img/screen.png' style='float: left; width: 70%; height: 70%;'/>
+            <div class='comment' style='float: right; width: 25%;'>
+              <p>What do we need to keep?</p>
+              <ul>
+                <li class='fragment'>List of Channels</li>
+                <li class='fragment'>Videos of Channels</li>
+                <li class='fragment'>Subscribed channels</li>
+                <li class='fragment'>Subscribed Videos</li>
+                <li class='fragment'>Current state</li>
+              </ul>
+            </div>
+          </section>
+          <section>
+            <p>Create stores based on the domain of the data</p>
+            <ul style='width: 100%;'>
+              <li class='fragment'>Application store for the application state</li>
+              <li class='fragment'>Channel store for channel objects</li>
+              <li class='fragment'>Video store for video objects</li>
+            </ul>
+            <p class='fragment'>What about the duplicate data?</p>
+            <ul>
+              <li class='fragment'>Video store has the video objects</li>
+              <li class='fragment'>Application store needs to keep the current playing video</li>
+              <li class='fragment'>Channel store needs to keep the list of videos it owns</li>
+            </ul>
+          </section>
+          <section>
+            <p>Keep the data in their domain,</br>and link to other store if needed</p>
+            <ul>
+              <li class='fragment' style='margin-bottom:10px'>Application store
+                <ul style='font-size: 80%'>
+                  <li>keeps application state, and ids for referencing the video and channel entity objects in the video and channel store</li>
+                </ul>
+              </li>
+              <li class='fragment' style='margin-bottom:10px'>Channel store
+                <ul style='font-size: 80%'>
+                  <li>keeps the channel entity objects, and lists of ids for referencing the video entity objects in the video store</li>
+                </ul>
+              </li>
+              <li class='fragment' style='margin-bottom:10px'>Video store
+                <ul style='font-size: 80%'>
+                  <li>keeps the video entity objects</li>
+                </ul>
+              </li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Summary</h2>
+          </section>
+          <section>
+            <p>React component</p>
+            <ul>
+              <li>Group mixin methods under a namespace to avoid collision.</li>
+              <li>The shared nature of mixin could result in unexpected singletons.</li>
+              <li>Choose the right key to avoid re-creating components.</li>
+            </ul>
+          </section>
+          <section>
+            <p>State management</p>
+            <ul>
+              <li>Use state for internal config and prop for external config.</li>
+              <li>Sync action and state change if they have dependency.</li>
+            </ul>
+          </section>
+          <section>
+            <p>Store</p>
+            <ul>
+              <li>Keep data in separate stores based on their domain.</li>
+            </ul>
+          </section>
+        </section>
+
+        <section>
+          <section>
+            <h2>Thank you!</h2>
+            <p>Full version: <a href='https://github.com/ktslwy/jsla-react-talk'/>https://github.com/ktslwy/jsla-react-talk</a></p>
+          </section>
+        </section>
+
+      </div>
+
+    </div>
+
+    <script src='reveal.js/lib/js/head.min.js'></script>
+    <script src='reveal.js/js/reveal.js'></script>
+
+    <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
